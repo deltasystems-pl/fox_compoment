@@ -32,6 +32,7 @@ from .const import DOMAIN
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.const import Platform
+from homeassistant.helpers import device_registry as dr
 from homeassistant.util import Throttle
 
 _LOGGER = logging.getLogger(__name__)
@@ -51,6 +52,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     for device_config in entry.data["discovered_devices"]:
         fox_devices_coordinator.add_device_by_config(DeviceData(**device_config))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    area_id = entry.data.get("area_id")
+    if area_id:
+        await _assign_area_to_devices(hass, fox_devices_coordinator, area_id)
     return True
 
 
@@ -162,3 +166,22 @@ class FoxDevicesCoordinator:
             if isinstance(switch, FoxR1S1Device):
                 sensors.append(switch)
         return sensors
+
+
+async def _assign_area_to_devices(
+    hass: HomeAssistant, coordinator: FoxDevicesCoordinator, area_id: str
+):
+    """Assign all devices to the given area."""
+    registry = dr.async_get(hass)
+    devices = []
+    for platform_devices in coordinator._FoxDevicesCoordinator__devices_map.values():
+        devices.extend(platform_devices)
+    for device in devices:
+        entry = registry.async_get_device(
+            identifiers={(device.device_platform, device.mac_addr)}
+        )
+        if entry is None:
+            continue
+        if entry.area_id == area_id:
+            continue
+        registry.async_update_device(entry.id, area_id=area_id)

@@ -13,6 +13,7 @@ import voluptuous as vol
 
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import area_registry as ar
 
 from .const import (
     DOMAIN,
@@ -23,6 +24,9 @@ from .const import (
     SCHEMA_INPUT_DEVICE_NAME_KEY,
     SCHEMA_INPUT_DEVICE_TYPE,
     SCHEMA_INPUT_ADD_ANOTHER,
+    SCHEMA_INPUT_AUTO_ADD,
+    SCHEMA_INPUT_ASSIGN_AREA,
+    SCHEMA_INPUT_AREA_ID,
     SCHEMA_INPUT_UPDATE_POOLING,
     SCHEMA_INPUT_SKIP_CONFIG,
 )
@@ -98,12 +102,14 @@ async def validate_input(
 
 
 async def serialize_dicovered_devices(
-    hass: HomeAssistant, devices: list[DeviceData]
-) -> dict[str, list[str]]:
+    hass: HomeAssistant, devices: list[DeviceData], area_id: str | None = None
+) -> dict[str, list[str] | str]:
     """Serialize discovered and configured devices."""
-    serialized: dict[str, list[str]] = {"discovered_devices": []}
+    serialized: dict[str, list[str] | str] = {"discovered_devices": []}
     for device in devices:
         serialized["discovered_devices"].append(device.__dict__)
+    if area_id:
+        serialized["area_id"] = area_id
     return serialized
 
 
@@ -154,6 +160,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._device_index = 0
         self._summary_displayed = False
         self._discover_task = None
+        self._auto_add = True
+        self._default_api_key = "000"
+        self._assign_area = False
+        self._area_id = None
 
     @staticmethod
     @callback
@@ -188,15 +198,34 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     data_schema=manual_input_schema,
                     description_placeholders={},
                 )
+            self._auto_add = user_input.get(SCHEMA_INPUT_AUTO_ADD, True)
+            self._default_api_key = user_input.get(SCHEMA_INPUT_DEVICE_API_KEY, "000")
+            self._assign_area = user_input.get(SCHEMA_INPUT_ASSIGN_AREA, False)
+            self._area_id = user_input.get(SCHEMA_INPUT_AREA_ID)
             self._discover_task = self.hass.async_create_task(self._async_do_discover_task())
             return self.async_show_progress(
                 step_id="discovering_finished",
                 progress_action="task",
                 progress_task=self._discover_task,
             )
+        area_reg = ar.async_get(self.hass)
+        area_map = {a.name: a.id for a in area_reg.async_list_areas()}
+        if area_map:
+            area_selector = vol.In(area_map)
+        else:
+            area_selector = str
+        data_schema = vol.Schema(
+            {
+                vol.Optional("manual", default=False): bool,
+                vol.Optional(SCHEMA_INPUT_AUTO_ADD, default=True): bool,
+                vol.Optional(SCHEMA_INPUT_DEVICE_API_KEY, default="000"): str,
+                vol.Optional(SCHEMA_INPUT_ASSIGN_AREA, default=False): bool,
+                vol.Optional(SCHEMA_INPUT_AREA_ID): area_selector,
+            }
+        )
         return self.async_show_form(
             step_id="user",
-            data_schema=vol.Schema({vol.Optional("manual", default=False): bool}),
+            data_schema=data_schema,
             description_placeholders={},
         )
 
@@ -204,6 +233,22 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ):
         """Discovering finished."""
+        if self._auto_add:
+            if len(self._discovered_devices) <= 0:
+                return self.async_show_form(
+                    step_id="manual",
+                    data_schema=manual_input_schema,
+                    description_placeholders={},
+                )
+            for dev in self._discovered_devices:
+                dev.api_key = self._default_api_key
+            area_id = self._area_id if self._assign_area else None
+            return self.async_create_entry(
+                title="F&F Fox",
+                data=await serialize_dicovered_devices(
+                    self.hass, self._discovered_devices, area_id
+                ),
+            )
         return self.async_show_progress_done(next_step_id="discovering_summary")
 
     async def async_step_discovering_summary(
@@ -325,10 +370,13 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         data_schema=manual_input_schema,
                         errors={},
                     )
+                area_id = self._area_id if self._assign_area else None
                 await self.async_set_unique_id(self._discovered_devices[0].mac_addr)
                 return self.async_create_entry(
                     title="F&F Fox",
-                    data=await serialize_dicovered_devices(self.hass, self._discovered_devices),
+                    data=await serialize_dicovered_devices(
+                        self.hass, self._discovered_devices, area_id
+                    ),
                 )
 
         return self.async_show_form(

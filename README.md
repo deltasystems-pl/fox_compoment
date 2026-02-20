@@ -31,7 +31,9 @@ Repozytorium komponentu:
 1. W Home Assistant przejdź do Integracje.
 2. Wyszukaj `F&F Fox devices`.
 3. Uruchom konfigurację.
-4. Jeśli automatyczne wykrywanie nie znajdzie urządzeń, wybierz opcję ręczną.
+4. Możesz wybrać automatyczne dodanie wszystkich urządzeń (bez klikania dla każdego).
+5. Opcjonalnie przypisz wszystkie urządzenia do jednego obszaru.
+6. Jeśli automatyczne wykrywanie nie znajdzie urządzeń, wybierz opcję ręczną.
 
 W trybie ręcznym podaj:
 - adres IP urządzenia,

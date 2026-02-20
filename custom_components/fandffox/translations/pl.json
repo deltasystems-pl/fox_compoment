@@ -18,7 +18,11 @@
       "user": {
           "description": "Rozpocznij konfigurację lub dodaj urządzenie ręcznie.",
           "data": {
-              "manual": "Dodaj urządzenie ręcznie"
+              "manual": "Dodaj urządzenie ręcznie",
+              "auto_add": "Dodaj automatycznie wszystkie urządzenia",
+              "rest_api_key": "Domyślny klucz RestAPI dla wszystkich urządzeń",
+              "assign_area": "Przypisz wszystkie urządzenia do jednego obszaru",
+              "area_id": "Obszar"
           }
       },
       "discovering_summary": {

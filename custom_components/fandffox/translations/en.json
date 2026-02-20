@@ -18,7 +18,11 @@
       "user": {
           "description": "Start configuration or add device manually.",
           "data": {
-              "manual": "Add device manually"
+              "manual": "Add device manually",
+              "auto_add": "Auto add all devices",
+              "rest_api_key": "Default RestAPI key for all devices",
+              "assign_area": "Assign all devices to one area",
+              "area_id": "Area"
           }
       },
       "discovering_summary": {
