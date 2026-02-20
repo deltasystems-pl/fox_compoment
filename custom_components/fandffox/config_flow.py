@@ -177,6 +177,16 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._discovered_devices = await self._fox_service_discovery.async_discover_devices(
             default_tries=6, interval=2
         )
+        # Filter out devices already configured
+        existing_macs = set()
+        for entry in self._async_current_entries():
+            for dev in entry.data.get("discovered_devices", []):
+                mac = dev.get("mac_addr")
+                if mac:
+                    existing_macs.add(mac)
+        self._discovered_devices = [
+            dev for dev in self._discovered_devices if dev.mac_addr not in existing_macs
+        ]
 
         # Continue the flow after show progress when the task is done.
         # To avoid a potential deadlock we create a new task that continues the flow.
@@ -233,22 +243,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ):
         """Discovering finished."""
-        if self._auto_add:
-            if len(self._discovered_devices) <= 0:
-                return self.async_show_form(
-                    step_id="manual",
-                    data_schema=manual_input_schema,
-                    description_placeholders={},
-                )
-            for dev in self._discovered_devices:
-                dev.api_key = self._default_api_key
-            area_id = self._area_id if self._assign_area else None
-            return self.async_create_entry(
-                title="F&F Fox",
-                data=await serialize_dicovered_devices(
-                    self.hass, self._discovered_devices, area_id
-                ),
-            )
         return self.async_show_progress_done(next_step_id="discovering_summary")
 
     async def async_step_discovering_summary(
@@ -263,6 +257,16 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 step_id="manual",
                 data_schema=manual_input_schema,
                 description_placeholders={},
+            )
+        if self._auto_add:
+            for dev in devices:
+                dev.api_key = self._default_api_key
+            area_id = self._area_id if self._assign_area else None
+            return self.async_create_entry(
+                title="F&F Fox",
+                data=await serialize_dicovered_devices(
+                    self.hass, devices, area_id
+                ),
             )
         if user_input is not None:
             if user_input.get("manual", False):
@@ -361,6 +365,19 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 device_mac,
                 device_type,
             )
+            existing_macs = set()
+            for entry in self._async_current_entries():
+                for dev in entry.data.get("discovered_devices", []):
+                    mac = dev.get("mac_addr")
+                    if mac:
+                        existing_macs.add(mac)
+            if device.mac_addr in existing_macs:
+                errors[SCHEMA_INPUT_DEVICE_MAC] = "device_exists"
+                return self.async_show_form(
+                    step_id="manual",
+                    data_schema=manual_input_schema,
+                    errors=errors,
+                )
             errors = await validate_input(self.hass, device)
             if errors == {}:
                 self._discovered_devices.append(device)

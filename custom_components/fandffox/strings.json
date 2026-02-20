@@ -41,6 +41,7 @@
     },
     "error": {
       "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
+      "device_exists": "Device already configured.",
       "unknown": "[%key:common::config_flow::error::unknown%]"
     },
     "abort": {

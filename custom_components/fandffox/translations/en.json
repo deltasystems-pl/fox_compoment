@@ -9,6 +9,7 @@
           "wrong_api_key": "Provided RestAPI key is invalid.",
           "invalid_host": "Invalid IP address.",
           "invalid_mac": "Invalid MAC address.",
+          "device_exists": "Device already configured.",
           "unknown": "Unexpected error."
       },
       "step": {
