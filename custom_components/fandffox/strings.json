@@ -3,6 +3,36 @@
     "step": {
       "confirm": {
         "description": "[%key:common::config_flow::description::confirm_setup%]"
+      },
+      "user": {
+        "description": "Start configuration or add device manually.",
+        "data": {
+          "manual": "Add device manually"
+        }
+      },
+      "discovering_summary": {
+        "description": "We found {devices_amount} F&F Fox devices. \n Go forward to configure them. Have RESTApi access keys ready - You can find it in Fox mobile application.",
+        "data": {
+          "manual": "Add device manually"
+        }
+      },
+      "configure_device": {
+        "data": {
+          "device_name": "Device name displayed in HomeAssistant.",
+          "rest_api_key": "RestAPI key to authorize communication.",
+          "skip_config": "Skip configuration for this devie."
+        }
+      },
+      "manual": {
+        "description": "Add device manually.",
+        "data": {
+          "device_name": "Device name displayed in HomeAssistant.",
+          "device_host": "Device IP address.",
+          "device_type": "Device type.",
+          "rest_api_key": "RestAPI key to authorize communication.",
+          "device_mac": "Device MAC address (optional).",
+          "add_another": "Add another device"
+        }
       }
     },
     "error": {
@@ -12,6 +42,44 @@
     "abort": {
       "single_instance_allowed": "[%key:common::config_flow::abort::single_instance_allowed%]",
       "no_devices_found": "[%key:common::config_flow::abort::no_devices_found%]"
+    }
+  },
+  "services": {
+    "set_cover_and_tilt_positions": {
+      "name": "Set cover and tilt positions",
+      "description": "Set cover and tilt positions in one call.",
+      "fields": {
+        "entity_id": {
+          "name": "Entity",
+          "description": "Target cover entity."
+        },
+        "position": {
+          "name": "Cover position",
+          "description": "Cover position in range 0-100."
+        },
+        "tilt_position": {
+          "name": "Tilt position",
+          "description": "Tilt position in range 0-100."
+        }
+      }
+    },
+    "set_cover_position_with_blocking": {
+      "name": "Set cover position with blocking time",
+      "description": "Set cover position with blocking time.",
+      "fields": {
+        "entity_id": {
+          "name": "Entity",
+          "description": "Target cover entity."
+        },
+        "position": {
+          "name": "Cover position",
+          "description": "Cover position in range 0-100."
+        },
+        "blocking_time": {
+          "name": "Blocking time",
+          "description": "Blocking time in milliseconds."
+        }
+      }
     }
   }
 }

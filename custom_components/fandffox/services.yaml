@@ -1,0 +1,63 @@
+set_cover_and_tilt_positions:
+  name: Set cover and tilt positions
+  description: Set cover and tilt positions in one call for STR1S2 devices.
+  fields:
+    entity_id:
+      name: Entity
+      description: Target cover entity.
+      required: true
+      selector:
+        entity:
+          domain: cover
+    position:
+      name: Cover position
+      description: Cover position in range 0-100.
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+          mode: slider
+    tilt_position:
+      name: Tilt position
+      description: Tilt position in range 0-100.
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+          mode: slider
+
+set_cover_position_with_blocking:
+  name: Set cover position with blocking time
+  description: Set cover position with blocking time for STR1S2 devices.
+  fields:
+    entity_id:
+      name: Entity
+      description: Target cover entity.
+      required: true
+      selector:
+        entity:
+          domain: cover
+    position:
+      name: Cover position
+      description: Cover position in range 0-100.
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+          mode: slider
+    blocking_time:
+      name: Blocking time
+      description: Blocking time in milliseconds.
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 60000
+          step: 100
+          mode: box

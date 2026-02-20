@@ -7,15 +7,26 @@
       "error": {
           "cannot_connect": "Nie udało się połączyć z urządzniem F&F Fox. Sprawdź klucz RestAPI oraz połączenie z siecią WiFi.",
           "wrong_api_key": "Wprowadzony klucz RestAPI jest nieprawidłowy.",
+          "invalid_host": "Nieprawidłowy adres IP.",
+          "invalid_mac": "Nieprawidłowy adres MAC.",
           "unknown": "Nieznany błąd."
       },
       "step": {
-          "confirm": {
-              "description": "Czy chcesz rozpocząć konfigurację?"
-          },
-          "discovering_summary": {
-              "description": "Znaleźliśmy następującą ilość urządzeń F&F Fox: {devices_amount}\nPrzejdź dalej aby skonfigurować swoje urządzenia. Przygotuj klucz RestAPI. Znajdziesz go w aplikacji F&F Fox."
-          },
+      "confirm": {
+          "description": "Czy chcesz rozpocząć konfigurację?"
+      },
+      "user": {
+          "description": "Rozpocznij konfigurację lub dodaj urządzenie ręcznie.",
+          "data": {
+              "manual": "Dodaj urządzenie ręcznie"
+          }
+      },
+      "discovering_summary": {
+          "description": "Znaleźliśmy następującą ilość urządzeń F&F Fox: {devices_amount}\nPrzejdź dalej aby skonfigurować swoje urządzenia. Przygotuj klucz RestAPI. Znajdziesz go w aplikacji F&F Fox.",
+          "data": {
+              "manual": "Dodaj urządzenie ręcznie"
+          }
+      },
           "configure_device": {
               "description": "Konfigurujesz urządzenie F&F Fox: {device_type} o identyfikatorze: {device_id} i adresie IP: {device_host}.\nWprowadź nazwę urządzenia lub pozostaw pustą aby pobrać domyślną nazwę z urządzenia.\nJeśli ustawiłeś urządzenie F&F Fox w tryb: klucz API niewymagany, klucz 000 zostanie użyty jako domyślny.",
               "data": {
@@ -23,7 +34,18 @@
                   "rest_api_key": "Klucz RestAPI do autoryzacji połączenia.",
                   "skip_config": "Pomiń konfigurację dla tego urządzenia."
               }
+          },
+      "manual": {
+          "description": "Nie znaleziono urządzeń. Dodaj urządzenie ręcznie.",
+          "data": {
+              "device_name": "Nazwa urządzenia widoczna w HomeAssistant",
+              "device_host": "Adres IP urządzenia.",
+              "device_type": "Typ urządzenia.",
+              "rest_api_key": "Klucz RestAPI do autoryzacji połączenia.",
+              "device_mac": "Adres MAC urządzenia (opcjonalnie).",
+              "add_another": "Dodaj kolejne urządzenie"
           }
+      }
       },
       "progress": {
           "task": "Wyszukujemy urządzenia F&F Fox w sieci lokalnej."
@@ -41,6 +63,45 @@
               },
               "description": "Konfiguruj integrację F&F Fox device",
               "title": "F&F Fox opcje"
+          }
+      }
+  }
+  ,
+  "services": {
+      "set_cover_and_tilt_positions": {
+          "name": "Ustaw pozycje rolety i lameli",
+          "description": "Ustaw pozycje rolety i lameli jednym wywołaniem.",
+          "fields": {
+              "entity_id": {
+                  "name": "Encja",
+                  "description": "Docelowa encja typu cover."
+              },
+              "position": {
+                  "name": "Pozycja rolety",
+                  "description": "Pozycja rolety w zakresie 0-100."
+              },
+              "tilt_position": {
+                  "name": "Pozycja lameli",
+                  "description": "Pozycja lameli w zakresie 0-100."
+              }
+          }
+      },
+      "set_cover_position_with_blocking": {
+          "name": "Ustaw pozycję rolety z blokadą",
+          "description": "Ustaw pozycję rolety z czasem blokady.",
+          "fields": {
+              "entity_id": {
+                  "name": "Encja",
+                  "description": "Docelowa encja typu cover."
+              },
+              "position": {
+                  "name": "Pozycja rolety",
+                  "description": "Pozycja rolety w zakresie 0-100."
+              },
+              "blocking_time": {
+                  "name": "Czas blokady",
+                  "description": "Czas blokady w milisekundach."
+              }
           }
       }
   }

@@ -1,7 +1,9 @@
 """Config flow for F&F Fox devices."""
 from __future__ import annotations
 
+import ipaddress
 import logging
+import re
 from typing import Any
 
 from foxrestapiclient.devices.const import DEVICES
@@ -16,7 +18,11 @@ from .const import (
     DOMAIN,
     POOLING_INTERVAL,
     SCHEMA_INPUT_DEVICE_API_KEY,
+    SCHEMA_INPUT_DEVICE_HOST,
+    SCHEMA_INPUT_DEVICE_MAC,
     SCHEMA_INPUT_DEVICE_NAME_KEY,
+    SCHEMA_INPUT_DEVICE_TYPE,
+    SCHEMA_INPUT_ADD_ANOTHER,
     SCHEMA_INPUT_UPDATE_POOLING,
     SCHEMA_INPUT_SKIP_CONFIG,
 )
@@ -30,6 +36,35 @@ device_input_schema = vol.Schema(
         vol.Optional(SCHEMA_INPUT_SKIP_CONFIG, default=False): bool,
     }
 )
+
+device_type_map = {DEVICES[k]: k for k in DEVICES}
+manual_input_schema = vol.Schema(
+    {
+        vol.Optional(SCHEMA_INPUT_DEVICE_NAME_KEY): str,
+        vol.Required(SCHEMA_INPUT_DEVICE_HOST): str,
+        vol.Required(SCHEMA_INPUT_DEVICE_TYPE): vol.In(device_type_map),
+        vol.Required(SCHEMA_INPUT_DEVICE_API_KEY, default="000"): str,
+        vol.Optional(SCHEMA_INPUT_DEVICE_MAC): str,
+        vol.Optional(SCHEMA_INPUT_ADD_ANOTHER, default=False): bool,
+    }
+)
+
+_MAC_PATTERN = re.compile(r"^([0-9A-Fa-f]{2}([-:])){5}([0-9A-Fa-f]{2})$")
+
+def _validate_manual_input(user_input: dict[str, Any]) -> dict[str, str]:
+    """Validate manual input fields."""
+    errors: dict[str, str] = {}
+    host = user_input.get(SCHEMA_INPUT_DEVICE_HOST)
+    if host:
+        try:
+            ipaddress.ip_address(host)
+        except ValueError:
+            errors[SCHEMA_INPUT_DEVICE_HOST] = "invalid_host"
+    mac = user_input.get(SCHEMA_INPUT_DEVICE_MAC)
+    if mac:
+        if not _MAC_PATTERN.match(mac):
+            errors[SCHEMA_INPUT_DEVICE_MAC] = "invalid_mac"
+    return errors
 
 async def validate_input_pooling(
     hass: HomeAssistant, value: str
@@ -53,9 +88,12 @@ async def validate_input(
     """
     errors = {}
 
-    fetched_data = await FoxBaseDevice(device_data).async_fetch_device_info()
-    if fetched_data is False:
-        errors[SCHEMA_INPUT_DEVICE_API_KEY] = "wrong_api_key"
+    try:
+        fetched_data = await FoxBaseDevice(device_data).async_fetch_device_info()
+        if fetched_data is False:
+            errors[SCHEMA_INPUT_DEVICE_API_KEY] = "wrong_api_key"
+    except Exception:
+        errors[SCHEMA_INPUT_DEVICE_HOST] = "cannot_connect"
     return errors # errors
 
 
@@ -108,8 +146,13 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Configuration flow."""
 
     VERSION = 2
-    # Fox service discovery object
-    fox_service_discovery = FoxServiceDiscovery()
+
+    def __init__(self):
+        """Initialize flow."""
+        self._fox_service_discovery = FoxServiceDiscovery()
+        self._discovered_devices: list[DeviceData] = []
+        self._device_index = 0
+        self._summary_displayed = False
 
     @staticmethod
     @callback
@@ -120,7 +163,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Do service discovery task."""
 
         # Discover F&F Fox devices in local network
-        await self.fox_service_discovery.async_discover_devices()
+        self._discovered_devices = await self._fox_service_discovery.async_discover_devices(
+            default_tries=6, interval=2
+        )
 
         # Continue the flow after show progress when the task is done.
         # To avoid a potential deadlock we create a new task that continues the flow.
@@ -135,10 +180,21 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         # Check it is already configured
         if self._async_current_entries():
             return self.async_abort(reason="single_instance_allowed")
-        # Do discover task
-        self.hass.async_create_task(self._async_do_discover_task())
-        return self.async_show_progress(
-            step_id="discovering_finished", progress_action="task"
+        if user_input is not None:
+            if user_input.get("manual", False):
+                return self.async_show_form(
+                    step_id="manual",
+                    data_schema=manual_input_schema,
+                    description_placeholders={},
+                )
+            self.hass.async_create_task(self._async_do_discover_task())
+            return self.async_show_progress(
+                step_id="discovering_finished", progress_action="task"
+            )
+        return self.async_show_form(
+            step_id="user",
+            data_schema=vol.Schema({vol.Optional("manual", default=False): bool}),
+            description_placeholders={},
         )
 
     async def async_step_discovering_finished(
@@ -152,16 +208,24 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ):
         """Handle the discovering summary."""
         # Get discovered devices
-        devices = self.fox_service_discovery.get_discovered_devices()
+        devices = self._discovered_devices
         # There is no devices, abort.
         if len(devices) <= 0:
-            return self.async_abort(reason="no_devices_found")
+            return self.async_show_form(
+                step_id="manual",
+                data_schema=manual_input_schema,
+                description_placeholders={},
+            )
+        if user_input is not None:
+            if user_input.get("manual", False):
+                return self.async_show_form(
+                    step_id="manual",
+                    data_schema=manual_input_schema,
+                    description_placeholders={},
+                )
         # If user input is not none, show configuration form.
-        if "summary_displayed" in self.hass.data:
-            self.hass.data.pop("summary_displayed")
-            # Set current device index
-            if "device_index" not in self.hass.data:
-                self.hass.data.update({"device_index": 0})
+        if getattr(self, "_summary_displayed", False):
+            self._summary_displayed = False
             return self.async_show_form(
                 step_id="configure_device",
                 data_schema=device_input_schema,
@@ -172,9 +236,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     "device_type": DEVICES[devices[0].dev_type]
                 },
             )
-        self.hass.data.update({"summary_displayed": True})
+        self._summary_displayed = True
         return self.async_show_form(
             step_id="discovering_summary",
+            data_schema=vol.Schema({vol.Optional("manual", default=False): bool}),
             description_placeholders={"devices_amount": len(devices)},
             last_step=False,
         )
@@ -186,9 +251,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
         if user_input is not None:
             current_device: DeviceData = (
-                self.fox_service_discovery.get_discovered_devices()[
-                    self.hass.data["device_index"]
-                ]
+                self._discovered_devices[self._device_index]
             )
             try:
                 current_device.skip = user_input[SCHEMA_INPUT_SKIP_CONFIG]
@@ -198,27 +261,24 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 _LOGGER.info("Device name was not set. Default will be used.")
             errors = await validate_input(self.hass, current_device)
             if errors == {}:
-                self.hass.data["device_index"] = self.hass.data["device_index"] + 1
+                self._device_index = self._device_index + 1
                 await self.async_set_unique_id(current_device.mac_addr)
 
-        should_finish = len(self.fox_service_discovery.get_discovered_devices()) < (
-            self.hass.data["device_index"] + 1
+        should_finish = len(self._discovered_devices) < (
+            self._device_index + 1
         )
         if should_finish is True:
-            self.hass.data.pop("device_index")
             return self.async_create_entry(
                 title="F&F Fox",
                 data=await serialize_dicovered_devices(
-                    self.hass, self.fox_service_discovery.get_discovered_devices()
+                    self.hass, self._discovered_devices
                 ),
             )
-        is_last_step = len(self.fox_service_discovery.get_discovered_devices()) == (
-            self.hass.data["device_index"] + 1
+        is_last_step = len(self._discovered_devices) == (
+            self._device_index + 1
         )
         # Get next device to fill placeholders data
-        next_device = self.fox_service_discovery.get_discovered_devices()[
-            self.hass.data["device_index"]
-        ]
+        next_device = self._discovered_devices[self._device_index]
         return self.async_show_form(
             step_id="configure_device",
             data_schema=device_input_schema,
@@ -228,5 +288,48 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 "device_host": next_device.host,
                 "device_type": DEVICES[next_device.dev_type]
             },
+            errors=errors,
+        )
+
+    async def async_step_manual(
+        self, user_input: dict[str, Any] | None = None
+    ):
+        """Manual setup when discovery fails."""
+        errors = {}
+        if user_input is not None:
+            errors = _validate_manual_input(user_input)
+            if errors:
+                return self.async_show_form(
+                    step_id="manual",
+                    data_schema=manual_input_schema,
+                    errors=errors,
+                )
+            device_type = user_input[SCHEMA_INPUT_DEVICE_TYPE]
+            device_mac = user_input.get(SCHEMA_INPUT_DEVICE_MAC) or user_input[SCHEMA_INPUT_DEVICE_HOST]
+            device = DeviceData(
+                user_input.get(SCHEMA_INPUT_DEVICE_NAME_KEY),
+                user_input[SCHEMA_INPUT_DEVICE_HOST],
+                user_input[SCHEMA_INPUT_DEVICE_API_KEY],
+                device_mac,
+                device_type,
+            )
+            errors = await validate_input(self.hass, device)
+            if errors == {}:
+                self._discovered_devices.append(device)
+                if user_input.get(SCHEMA_INPUT_ADD_ANOTHER, False):
+                    return self.async_show_form(
+                        step_id="manual",
+                        data_schema=manual_input_schema,
+                        errors={},
+                    )
+                await self.async_set_unique_id(self._discovered_devices[0].mac_addr)
+                return self.async_create_entry(
+                    title="F&F Fox",
+                    data=await serialize_dicovered_devices(self.hass, self._discovered_devices),
+                )
+
+        return self.async_show_form(
+            step_id="manual",
+            data_schema=manual_input_schema,
             errors=errors,
         )

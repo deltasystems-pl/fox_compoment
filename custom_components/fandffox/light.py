@@ -11,10 +11,8 @@ from .const import DOMAIN, POOLING_INTERVAL, SCHEMA_INPUT_UPDATE_POOLING
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_HS_COLOR,
-    COLOR_MODE_BRIGHTNESS,
-    SUPPORT_BRIGHTNESS,
-    SUPPORT_COLOR,
-    SUPPORT_EFFECT,
+    ColorMode,
+    LightEntityFeature,
     LightEntity,
 )
 from homeassistant.helpers.update_coordinator import (
@@ -115,11 +113,13 @@ class FoxBaseLight(CoordinatorEntity, LightEntity):
                 True, self._channel
             )
         if kwargs == {}:
+            await self.coordinator.async_request_refresh()
             return
         if ATTR_BRIGHTNESS in kwargs:
             await self.coordinator.data[self._idx].async_update_channel_brightness(
                 kwargs[ATTR_BRIGHTNESS], self._channel
             )
+        await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self, **kwargs) -> None:
         """Turn off light."""
@@ -127,6 +127,7 @@ class FoxBaseLight(CoordinatorEntity, LightEntity):
             await self.coordinator.data[self._idx].async_update_channel_state(
                 False, self._channel
             )
+        await self.coordinator.async_request_refresh()
 
 
 class FoxDimmableLight(FoxBaseLight):
@@ -139,12 +140,12 @@ class FoxDimmableLight(FoxBaseLight):
     @property
     def supported_features(self):
         """Return supported features."""
-        return SUPPORT_BRIGHTNESS
+        return LightEntityFeature.BRIGHTNESS
 
     @property
     def color_mode(self):
         """Return the color mode of the light."""
-        return COLOR_MODE_BRIGHTNESS
+        return ColorMode.BRIGHTNESS
 
 
 class FoxLED2S2Light(FoxDimmableLight):
@@ -190,7 +191,7 @@ class FoxRGBWLight(FoxBaseLight):
     @property
     def supported_features(self):
         """Return supported features."""
-        return SUPPORT_BRIGHTNESS | SUPPORT_COLOR | SUPPORT_EFFECT
+        return LightEntityFeature.BRIGHTNESS | LightEntityFeature.COLOR
 
     @property
     def brightness(self):
@@ -202,6 +203,11 @@ class FoxRGBWLight(FoxBaseLight):
         """Get HS color."""
         return self.coordinator.data[self._idx].get_hs_color()
 
+    @property
+    def color_mode(self):
+        """Return the color mode of the light."""
+        return ColorMode.HS
+
     async def async_turn_on(self, **kwargs) -> None:
         """Turn on device."""
         if self.coordinator.data[self._idx].is_on(self._channel) is False:
@@ -209,6 +215,7 @@ class FoxRGBWLight(FoxBaseLight):
                 True, self._channel
             )
         if kwargs == {}:
+            await self.coordinator.async_request_refresh()
             return
         if ATTR_HS_COLOR in kwargs:
             hs = kwargs[ATTR_HS_COLOR]
@@ -219,3 +226,4 @@ class FoxRGBWLight(FoxBaseLight):
                 (kwargs[ATTR_BRIGHTNESS] / 255)
                 * 100  # Fox RGBW light supports brightness from 0 to 100
             )
+        await self.coordinator.async_request_refresh()

@@ -31,13 +31,14 @@ from foxrestapiclient.devices.fox_str1s2_device import FoxSTR1S2Device
 from .const import DOMAIN
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.const import Platform
 from homeassistant.util import Throttle
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.propagate = False
 THROTTLE_TIME = timedelta(seconds=1)
 # Supported platforms.
-PLATFORMS = ["cover", "light", "switch", "sensor"]
+PLATFORMS = [Platform.COVER, Platform.LIGHT, Platform.SWITCH, Platform.SENSOR]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -49,7 +50,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data[DOMAIN][entry.entry_id] = fox_devices_coordinator
     for device_config in entry.data["discovered_devices"]:
         fox_devices_coordinator.add_device_by_config(DeviceData(**device_config))
-    hass.config_entries.async_setup_platforms(entry, PLATFORMS)
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 

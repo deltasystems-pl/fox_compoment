@@ -107,6 +107,7 @@ class FoxBaseSwitch(CoordinatorEntity, SwitchEntity):
             await self.coordinator.data[self._idx].async_update_channel_state(
                 True, self._channel
             )
+        await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self, **kwargs) -> None:
         """Turn off the device."""
@@ -114,3 +115,4 @@ class FoxBaseSwitch(CoordinatorEntity, SwitchEntity):
             await self.coordinator.data[self._idx].async_update_channel_state(
                 False, self._channel
             )
+        await self.coordinator.async_request_refresh()

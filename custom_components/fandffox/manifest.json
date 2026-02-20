@@ -2,17 +2,17 @@
   "domain": "fandffox",
   "name": "F&F Fox devices",
   "config_flow": true,
-  "documentation": "https://www.home-assistant.io/integrations/fandffox",
+  "documentation": "https://github.com/deltasystems-pl/foxrestapiclient",
   "requirements": [
-    "foxrestapiclient==0.1.15"
+    "foxrestapiclient==0.1.17"
   ],
-  "version": "1.1.2",
+  "version": "1.3.0",
   "ssdp": [],
   "zeroconf": [],
   "homekit": {},
   "dependencies": [],
   "codeowners": [
-    "@fandf92"
+    "@deltasystems-pl"
   ],
   "iot_class": "local_polling"
 }

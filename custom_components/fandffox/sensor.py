@@ -7,9 +7,7 @@ import logging
 from . import FoxDevicesCoordinator
 from .const import DOMAIN, POOLING_INTERVAL, SCHEMA_INPUT_UPDATE_POOLING
 from homeassistant.components.sensor import (
-    DEVICE_CLASS_CURRENT,
-    DEVICE_CLASS_POWER,
-    DEVICE_CLASS_VOLTAGE,
+    SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
 )
@@ -17,9 +15,9 @@ from homeassistant.const import (
     ELECTRIC_CURRENT_AMPERE,
     ELECTRIC_POTENTIAL_VOLT,
     FREQUENCY_HERTZ,
-    POWER_KILO_WATT,
     POWER_WATT,
 )
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
@@ -32,19 +30,19 @@ FOX_SENSORS: tuple[SensorEntityDescription, ...] = (
     SensorEntityDescription(
         key="voltage",
         name="Voltage",
-        device_class=DEVICE_CLASS_VOLTAGE,
+        device_class=SensorDeviceClass.VOLTAGE,
         native_unit_of_measurement=ELECTRIC_POTENTIAL_VOLT,
     ),
     SensorEntityDescription(
         key="current",
         name="Current",
-        device_class=DEVICE_CLASS_CURRENT,
+        device_class=SensorDeviceClass.CURRENT,
         native_unit_of_measurement=ELECTRIC_CURRENT_AMPERE,
     ),
     SensorEntityDescription(
         key="power_active",
         name="Active power",
-        device_class=DEVICE_CLASS_POWER,
+        device_class=SensorDeviceClass.POWER,
         native_unit_of_measurement=POWER_WATT,
     ),
     SensorEntityDescription(
@@ -62,30 +60,30 @@ FOX_SENSORS: tuple[SensorEntityDescription, ...] = (
     SensorEntityDescription(
         key="power_factor",
         name="Power factor",
-        device_class=None
+        device_class=None,
     ),
     SensorEntityDescription(
         key="active_energy",
         name="Active energy",
-        device_class=DEVICE_CLASS_POWER,
+        device_class=None,
         native_unit_of_measurement=POWER_WATT,
     ),
     SensorEntityDescription(
         key="reactive_energy",
         name="Reactive energy",
-        device_class=DEVICE_CLASS_POWER,
+        device_class=None,
         native_unit_of_measurement="var",
     ),
     SensorEntityDescription(
         key="active_energy_import",
         name="Active energy import",
-        device_class=DEVICE_CLASS_POWER,
+        device_class=None,
         native_unit_of_measurement=POWER_WATT,
     ),
     SensorEntityDescription(
         key="reactive_energy_import",
         name="Reactive energy import",
-        device_class=DEVICE_CLASS_POWER,
+        device_class=None,
         native_unit_of_measurement="var",
     ),
 )
@@ -136,6 +134,7 @@ class FoxGenericSensor(CoordinatorEntity, SensorEntity):
         super().__init__(coordinator)
         self._idx = idx
         self.entity_description = description
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
 
     @property
     def name(self):
