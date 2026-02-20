@@ -12,10 +12,10 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
 )
 from homeassistant.const import (
-    ELECTRIC_CURRENT_AMPERE,
-    ELECTRIC_POTENTIAL_VOLT,
-    FREQUENCY_HERTZ,
-    POWER_WATT,
+    UnitOfElectricCurrent,
+    UnitOfElectricPotential,
+    UnitOfFrequency,
+    UnitOfPower,
 )
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.typing import StateType
@@ -31,19 +31,19 @@ FOX_SENSORS: tuple[SensorEntityDescription, ...] = (
         key="voltage",
         name="Voltage",
         device_class=SensorDeviceClass.VOLTAGE,
-        native_unit_of_measurement=ELECTRIC_POTENTIAL_VOLT,
+        native_unit_of_measurement=UnitOfElectricPotential.VOLT,
     ),
     SensorEntityDescription(
         key="current",
         name="Current",
         device_class=SensorDeviceClass.CURRENT,
-        native_unit_of_measurement=ELECTRIC_CURRENT_AMPERE,
+        native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
     ),
     SensorEntityDescription(
         key="power_active",
         name="Active power",
         device_class=SensorDeviceClass.POWER,
-        native_unit_of_measurement=POWER_WATT,
+        native_unit_of_measurement=UnitOfPower.WATT,
     ),
     SensorEntityDescription(
         key="power_reactive",
@@ -55,7 +55,7 @@ FOX_SENSORS: tuple[SensorEntityDescription, ...] = (
         key="frequency",
         name="AC Frequency",
         device_class=None,
-        native_unit_of_measurement=FREQUENCY_HERTZ,
+        native_unit_of_measurement=UnitOfFrequency.HERTZ,
     ),
     SensorEntityDescription(
         key="power_factor",
@@ -66,7 +66,7 @@ FOX_SENSORS: tuple[SensorEntityDescription, ...] = (
         key="active_energy",
         name="Active energy",
         device_class=None,
-        native_unit_of_measurement=POWER_WATT,
+        native_unit_of_measurement=UnitOfPower.WATT,
     ),
     SensorEntityDescription(
         key="reactive_energy",
@@ -78,7 +78,7 @@ FOX_SENSORS: tuple[SensorEntityDescription, ...] = (
         key="active_energy_import",
         name="Active energy import",
         device_class=None,
-        native_unit_of_measurement=POWER_WATT,
+        native_unit_of_measurement=UnitOfPower.WATT,
     ),
     SensorEntityDescription(
         key="reactive_energy_import",

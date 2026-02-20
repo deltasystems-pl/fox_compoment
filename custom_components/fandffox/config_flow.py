@@ -153,6 +153,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._discovered_devices: list[DeviceData] = []
         self._device_index = 0
         self._summary_displayed = False
+        self._discover_task = None
 
     @staticmethod
     @callback
@@ -187,9 +188,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     data_schema=manual_input_schema,
                     description_placeholders={},
                 )
-            self.hass.async_create_task(self._async_do_discover_task())
+            self._discover_task = self.hass.async_create_task(self._async_do_discover_task())
             return self.async_show_progress(
-                step_id="discovering_finished", progress_action="task"
+                step_id="discovering_finished",
+                progress_action="task",
+                progress_task=self._discover_task,
             )
         return self.async_show_form(
             step_id="user",
