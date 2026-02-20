@@ -48,7 +48,7 @@ FOX_SENSORS: tuple[SensorEntityDescription, ...] = (
     SensorEntityDescription(
         key="power_reactive",
         name="Reactive power",
-        device_class=DEVICE_CLASS_POWER,
+        device_class=None,
         native_unit_of_measurement="var",
     ),
     SensorEntityDescription(
